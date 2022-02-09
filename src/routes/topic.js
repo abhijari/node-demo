@@ -18,8 +18,10 @@ router.post("/", async (req, res) => {
 
   try {
     await topic.save();
-    res.send(toic);
+    res.send(topic);
   } catch (e) {
     res.status(400).send(e);
   }
 });
+
+module.exports = router;

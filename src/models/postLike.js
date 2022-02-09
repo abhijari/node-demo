@@ -11,6 +11,10 @@ const postLikeSchema = new mongoose.Schema(
       required: true,
       ref: "user",
     },
+    isLike: {
+      type: Boolean,
+      required: true,
+    },
   },
   {
     timestamps: true,

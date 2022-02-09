@@ -3,6 +3,7 @@ const router = express.Router();
 const multer = require("multer");
 const path = require("path");
 const Post = require("../models/Post");
+const postLike = require("../models/postLike");
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -28,10 +29,25 @@ const filefilter = (req, file, cb) => {
 
 const upload = multer({ storage: storage, fileFilter: filefilter });
 //create post
-router.post("/", upload.array("images", 5), (req, res) => {});
+router.post("/", async (req, res) => {
+  const post = new Post({
+    title: req.body.title,
+    body: req.body.body,
+    author: req.body.author,
+    //topics: { topic: [req.body.topics] },
+  });
+
+  res.send(req.body.topics);
+  try {
+    await post.save();
+    res.send(post);
+  } catch (e) {
+    res.status(400).send(e);
+  }
+});
 
 //get all post
-router.get("/", (req, res) => {
+router.get("/", async (req, res) => {
   try {
     const posts = await Post.find();
     res.send(posts);
@@ -41,25 +57,25 @@ router.get("/", (req, res) => {
 });
 
 //get my post
-router.get("/me", (req, res) => {
+router.get("/me", async (req, res) => {
   try {
   } catch (e) {}
 });
 
 //update post
-router.patch("/", (req, res) => {
+router.patch("/", async (req, res) => {
   try {
   } catch (e) {}
 });
 
 //delete post
-router.delete("/", (req, res) => {
+router.delete("/", async (req, res) => {
   try {
   } catch (e) {}
 });
 
 //get most recent
-router.get("/most-recent", (req, res) => {
+router.get("/most-recent", async (req, res) => {
   try {
   } catch (e) {}
 });
@@ -71,7 +87,20 @@ router.get("/most-liked", (req, res) => {
 });
 
 //like/dislike post
-router.post("/", (req, res) => {
+router.post("/", async (req, res) => {
   try {
+    const post = postLike.findOne({ author: req.user._id });
+    if (post) {
+      if (req.body.isLike === true) {
+        //if()
+      } else {
+      }
+    } else {
+      const postlike = new postLike(req.body);
+      await postLike.save();
+      res.send(postlike);
+    }
   } catch (e) {}
 });
+
+module.exports = router;

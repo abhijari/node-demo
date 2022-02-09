@@ -23,9 +23,11 @@ const postSchema = new mongoose.Schema(
     },
     topics: [
       {
-        type: mongoose.Schema.Types.ObjectId,
-        required: true,
-        ref: "topic",
+        topic: {
+          type: mongoose.Schema.Types.ObjectId,
+          required: true,
+          ref: "topic",
+        },
       },
     ],
   },

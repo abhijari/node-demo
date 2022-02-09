@@ -1,6 +1,12 @@
 const express = require("express");
+const userRoute = require("../src/routes/user");
+const topicRoute = require("../src/routes/topic");
+const postRoute = require("../src/routes/post");
 require("../src/db/mongoose.js");
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use("/user", userRoute);
+app.use("/topic", topicRoute);
+app.use("/post", postRoute);
 module.exports = app;
