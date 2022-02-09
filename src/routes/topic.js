@@ -1,8 +1,25 @@
 const express = require("express");
 const router = express.Router();
+const Topic = require("../models/Topic");
 
 //get all topic
-router.get("/", (req, res) => {});
+router.get("/", async (req, res) => {
+  try {
+    const topics = await Topic.find();
+    res.send(topics);
+  } catch (e) {
+    res.status(500).send(e);
+  }
+});
 
 //craete topic
-router.post("/", (req, res) => {});
+router.post("/", async (req, res) => {
+  const topic = new Topic(req.body);
+
+  try {
+    await topic.save();
+    res.send(toic);
+  } catch (e) {
+    res.status(400).send(e);
+  }
+});

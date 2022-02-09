@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-const likePostSchema = new mongoose.Schema(
+const postLikeSchema = new mongoose.Schema(
   {
     post: {
       type: mongoose.Schema.Types.ObjectId,
@@ -17,5 +17,5 @@ const likePostSchema = new mongoose.Schema(
   }
 );
 
-const postLike = mongoose.model("postLike", userSchema);
+const postLike = mongoose.model("postLike", postLikeSchema);
 module.exports = postLike;
