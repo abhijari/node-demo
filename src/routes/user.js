@@ -1,7 +1,6 @@
 const express = require("express");
 const router = express.Router();
 const User = require("../models/User.js");
-
 //signup
 router.post("/signup", async (req, res) => {
   const user = new User(req.body);
@@ -42,4 +41,5 @@ router.post("/logoutAll", async (req, res) => {
   try {
   } catch (e) {}
 });
+
 module.exports = router;

@@ -3,7 +3,7 @@ const router = express.Router();
 const multer = require("multer");
 const path = require("path");
 const Post = require("../models/Post");
-const postLike = require("../models/postLike");
+const PostLike = require("../models/postLike");
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -34,10 +34,10 @@ router.post("/", async (req, res) => {
     title: req.body.title,
     body: req.body.body,
     author: req.body.author,
-    //topics: { topic: [req.body.topics] },
+    topics: req.body.topics.split(","),
   });
 
-  res.send(req.body.topics);
+  //res.send(req.body.topics);
   try {
     await post.save();
     res.send(post);
@@ -60,6 +60,16 @@ router.get("/", async (req, res) => {
 router.get("/me", async (req, res) => {
   try {
   } catch (e) {}
+});
+
+//get post by topic
+router.get("/topic/:id", async (req, res) => {
+  try {
+    const posts = await Post.find({ topics: req.params.id }).populate("topics");
+    res.send(posts);
+  } catch (e) {
+    res.status(500).send(e);
+  }
 });
 
 //update post
@@ -89,18 +99,39 @@ router.get("/most-liked", (req, res) => {
 //like/dislike post
 router.post("/", async (req, res) => {
   try {
-    const post = postLike.findOne({ author: req.user._id });
-    if (post) {
+    const postLike = await PostLike.findOne({ author: req.user._id });
+    if (postLike) {
       if (req.body.isLike === true) {
-        //if()
+        if (postLike.isLike === true) {
+          //delete like
+          await postLike.delete();
+          res.send(post);
+        } else {
+          //update to true
+          postLike.isLike = true;
+          await postLike.save();
+          res.send();
+        }
       } else {
+        if (postLike.isLike === false) {
+          //delete like
+          await postLike.delete();
+          res.send(postLike);
+        } else {
+          //update to false
+          postLike.isLike = false;
+          await postLike.save();
+          res.send();
+        }
       }
     } else {
-      const postlike = new postLike(req.body);
+      const postlike = new PostLike(req.body);
       await postLike.save();
       res.send(postlike);
     }
-  } catch (e) {}
+  } catch (e) {
+    res.status(400).send(e);
+  }
 });
 
 module.exports = router;

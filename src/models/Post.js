@@ -1,4 +1,6 @@
 const mongoose = require("mongoose");
+const postComment = require("./PostComment");
+const postLike = require("./postLike");
 const postSchema = new mongoose.Schema(
   {
     title: {
@@ -23,11 +25,9 @@ const postSchema = new mongoose.Schema(
     },
     topics: [
       {
-        topic: {
-          type: mongoose.Schema.Types.ObjectId,
-          required: true,
-          ref: "topic",
-        },
+        type: mongoose.Schema.Types.ObjectId,
+        required: true,
+        ref: "topic",
       },
     ],
   },
@@ -36,5 +36,11 @@ const postSchema = new mongoose.Schema(
   }
 );
 
+postSchema.pre("remove", async function (next) {
+  const post = this;
+  await postLike.deleteMany({ post: post._id });
+  await postComment.deleteMany({ post: post._id });
+  next();
+});
 const User = mongoose.model("post", postSchema);
 module.exports = User;
