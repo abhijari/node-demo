@@ -5,6 +5,7 @@ const path = require("path");
 const Post = require("../models/Post");
 const postComment = require("../models/PostComment");
 const PostLike = require("../models/postLike");
+const auth = require("../middleware/auth");
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -30,15 +31,19 @@ const filefilter = (req, file, cb) => {
 
 const upload = multer({ storage: storage, fileFilter: filefilter });
 //create post
-router.post("/", async (req, res) => {
+router.post("/", auth, upload.array("images", 8), async (req, res) => {
+  //const { filename } = req.files;
+  //res.send(filename);
+
   const post = new Post({
     title: req.body.title,
     body: req.body.body,
-    author: req.body.author,
+    author: req.user._id,
+    images: req.files,
     topics: req.body.topics.split(","),
   });
 
-  //res.send(req.body.topics);
+  // res.send(req.body.topics);
   try {
     await post.save();
     res.status(201).send(post);
@@ -48,7 +53,7 @@ router.post("/", async (req, res) => {
 });
 
 //get all post
-router.get("/", async (req, res) => {
+router.get("/", auth, async (req, res) => {
   try {
     const posts = await Post.aggregate([
       {
@@ -57,6 +62,32 @@ router.get("/", async (req, res) => {
           localField: "_id",
           foreignField: "post",
           as: "likes",
+          pipeline: [
+            {
+              $match: { isLike: true },
+            },
+          ],
+        },
+      },
+      {
+        $lookup: {
+          from: "postlikes",
+          localField: "_id",
+          foreignField: "post",
+          as: "dislikes",
+          pipeline: [
+            {
+              $match: { isLike: false },
+            },
+          ],
+        },
+      },
+      {
+        $lookup: {
+          from: "postcomments",
+          localField: "_id",
+          foreignField: "post",
+          as: "comments",
         },
       },
       {
@@ -64,11 +95,12 @@ router.get("/", async (req, res) => {
           totalLikes: {
             $size: "$likes",
           },
-        },
-      },
-      {
-        $sort: {
-          totalLikes: -1,
+          totalUnLikes: {
+            $size: "$dislikes",
+          },
+          totalComments: {
+            $size: "$comments",
+          },
         },
       },
     ]);
@@ -79,13 +111,17 @@ router.get("/", async (req, res) => {
 });
 
 //get my post
-router.get("/me", async (req, res) => {
+router.get("/me", auth, async (req, res) => {
   try {
-  } catch (e) {}
+    const post = await req.user.populate("postList");
+    res.send(post.postList);
+  } catch (e) {
+    res.status(500).send(e);
+  }
 });
 
 //get post by topic
-router.get("/topic/:id", async (req, res) => {
+router.get("/topic/:id", auth, async (req, res) => {
   try {
     const posts = await Post.find({ topics: req.params.id }).populate("topics");
     res.send(posts);
@@ -95,13 +131,45 @@ router.get("/topic/:id", async (req, res) => {
 });
 
 //update post
-router.patch("/", async (req, res) => {
+router.patch("/:id", auth, async (req, res) => {
   try {
+    const updates = Object.keys(req.body);
+    const allowFileds = ["title", "body", "topics"];
+    const isValidFeilds = updates.every((feild) => allowFileds.includes(feild));
+
+    if (!isValidFeilds) {
+      res.status(400).send({ error: "Invalid updates!" });
+    }
+    if (req.body.topics) {
+      req.body.topics = req.body.topics.split(",");
+    }
+
+    try {
+      const post = await Post.findOneAndUpdate(
+        {
+          _id: req.params.id,
+          author: req.user._id,
+        },
+        req.body,
+        {
+          new: true,
+          runValidators: true,
+        }
+      );
+
+      if (!post) {
+        return res.status(404).send();
+      }
+
+      res.send(post);
+    } catch (e) {}
+
+    const post = await Post.findByIdAndUpdate();
   } catch (e) {}
 });
 
 //delete post
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", auth, async (req, res) => {
   try {
     const post = await Post.findOneAndDelete({
       _id: req.params.id,
@@ -117,7 +185,7 @@ router.delete("/:id", async (req, res) => {
 });
 
 //get most recent
-router.get("/most-recent", async (req, res) => {
+router.get("/most-recent", auth, async (req, res) => {
   try {
     const recentpost = await Post.find().sort({ _id: -1 });
     res.send(recentpost);
@@ -127,7 +195,7 @@ router.get("/most-recent", async (req, res) => {
 });
 
 //get most liked
-router.get("/most-liked", async (req, res) => {
+router.get("/most-liked", auth, async (req, res) => {
   try {
     const posts = await Post.aggregate([
       {
@@ -136,6 +204,11 @@ router.get("/most-liked", async (req, res) => {
           localField: "_id",
           foreignField: "post",
           as: "likes",
+          pipeline: [
+            {
+              $match: { isLike: true },
+            },
+          ],
         },
       },
       {
@@ -158,10 +231,10 @@ router.get("/most-liked", async (req, res) => {
 });
 
 //like/dislike post
-router.post("/like", async (req, res) => {
+router.post("/like", auth, async (req, res) => {
   try {
     const postLike = await PostLike.findOne({
-      author: req.body.author,
+      author: req.user._id,
       post: req.body.post,
     });
 
@@ -193,20 +266,35 @@ router.post("/like", async (req, res) => {
         }
       }
     } else {
-      const like = new PostLike(req.body);
-      await like.status(201).save();
+      const like = new PostLike({ author: req.user._id, ...req.body });
+      await like.save();
       res.send(like);
     }
+  } catch (e) {
+    res.status(400).send(e.toString());
+  }
+});
+
+router.post("/comment", auth, async (req, res) => {
+  try {
+    const postcomment = new postComment({ author: req.user._id, ...req.body });
+    await postcomment.save();
+    res.status(201).send(postcomment);
   } catch (e) {
     res.status(400).send(e);
   }
 });
 
-router.post("/comment", async (req, res) => {
+router.delete("/deleteComment/:id", auth, async (req, res) => {
   try {
-    const postcomment = new postComment(req.body);
-    await postcomment.save();
-    res.status(201).send(postcomment);
+    const comment = await postComment.findOneAndDelete({
+      author: req.user._id,
+      post: req.params.id,
+    });
+    if (!comment) {
+      res.send(404).send();
+    }
+    res.send(comment);
   } catch (e) {
     res.status(400).send(e);
   }

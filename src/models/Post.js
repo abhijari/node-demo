@@ -15,7 +15,7 @@ const postSchema = new mongoose.Schema(
     },
     images: [
       {
-        type: String,
+        type: Object,
       },
     ],
     author: {

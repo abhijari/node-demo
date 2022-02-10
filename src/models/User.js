@@ -53,12 +53,12 @@ userSchema.methods.generateAuthToken = async function () {
     { _id: user._id.toString() },
     process.env.JWT_TOKEN
   );
-  user.tokens.push(token);
+  user.tokens.push({ token });
   await user.save();
   return token;
 };
-userSchema.static.checkCredential = async (email, password) => {
-  const user = User.findOne({ email: email });
+userSchema.statics.checkCredential = async (email, password) => {
+  const user = await User.findOne({ email: email });
   if (!user) {
     throw "Unable to login";
   }
@@ -79,7 +79,7 @@ userSchema.virtual("postList", {
 
 userSchema.pre("save", async function (next) {
   const user = this;
-  if (usre.isModified("password")) {
+  if (user.isModified("password")) {
     user.password = await bcrypt.hash(user.password, 8);
   }
   next();

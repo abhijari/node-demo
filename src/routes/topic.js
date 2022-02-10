@@ -1,9 +1,10 @@
 const express = require("express");
 const router = express.Router();
 const Topic = require("../models/Topic");
+const auth = require("../middleware/auth");
 
 //get all topic
-router.get("/", async (req, res) => {
+router.get("/", auth,async (req, res) => {
   try {
     const topics = await Topic.find();
     res.send(topics);
@@ -13,7 +14,7 @@ router.get("/", async (req, res) => {
 });
 
 //craete topic
-router.post("/", async (req, res) => {
+router.post("/",auth, async (req, res) => {
   const topic = new Topic(req.body);
 
   try {

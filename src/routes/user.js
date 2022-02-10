@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
-const User = require("../models/User.js");
+const User = require("../models/User");
+const auth = require("../middleware/auth");
 //signup
 router.post("/signup", async (req, res) => {
   const user = new User(req.body);
@@ -11,7 +12,7 @@ router.post("/signup", async (req, res) => {
 
     res.status(201).send({ user, token });
   } catch (e) {
-    res.status(400).send(e);
+    res.status(400).send(e.toString());
   }
 });
 
@@ -24,30 +25,30 @@ router.post("/login", async (req, res) => {
 
     res.send({ user, token });
   } catch (e) {
-    res.status(400).send(e);
+    res.status(400).send(e.toString());
   }
 });
 
 //get user detail
-router.get("/profile/me", async (req, res) => {
+router.get("/profile/me", auth, async (req, res) => {
   try {
   } catch (e) {}
 });
 
 //update user
-router.patch("/", async (req, res) => {
+router.patch("/", auth, async (req, res) => {
   try {
   } catch (e) {}
 });
 
 //logout user
-router.post("/logout", async (req, res) => {
+router.post("/logout", auth, async (req, res) => {
   try {
   } catch (e) {}
 });
 
 //logout from all
-router.post("/logoutAll", async (req, res) => {
+router.post("/logoutAll", auth, async (req, res) => {
   try {
   } catch (e) {}
 });
