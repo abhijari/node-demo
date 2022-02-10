@@ -70,6 +70,7 @@ userSchema.static.checkCredential = async (email, password) => {
 
   return user;
 };
+
 userSchema.virtual("postList", {
   ref: "post",
   localField: "_id",

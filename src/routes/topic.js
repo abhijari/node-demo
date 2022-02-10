@@ -18,7 +18,7 @@ router.post("/", async (req, res) => {
 
   try {
     await topic.save();
-    res.send(topic);
+    res.status(201).send(topic);
   } catch (e) {
     res.status(400).send(e);
   }

@@ -42,5 +42,11 @@ postSchema.pre("remove", async function (next) {
   await postComment.deleteMany({ post: post._id });
   next();
 });
+
+postSchema.virtual("hhh", {
+  ref: "postLike",
+  localField: "_id",
+  foreignField: "post",
+});
 const User = mongoose.model("post", postSchema);
 module.exports = User;
