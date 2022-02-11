@@ -6,6 +6,7 @@ const Post = require("../models/Post");
 const postComment = require("../models/PostComment");
 const PostLike = require("../models/postLike");
 const auth = require("../middleware/auth");
+const postLike = require("../models/postLike");
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -29,31 +30,46 @@ const filefilter = (req, file, cb) => {
   }
 };
 
-const upload = multer({ storage: storage, fileFilter: filefilter });
-//create post
-router.post("/", auth, upload.array("images", 8), async (req, res) => {
-  //const { filename } = req.files;
-  //res.send(filename);
-
-  const post = new Post({
-    title: req.body.title,
-    body: req.body.body,
-    author: req.user._id,
-    images: req.files,
-    topics: req.body.topics.split(","),
-  });
-
-  // res.send(req.body.topics);
-  try {
-    await post.save();
-    res.status(201).send(post);
-  } catch (e) {
-    res.status(400).send(e);
-  }
+const upload = multer({
+  storage: storage,
+  fileFilter: filefilter,
+  limits: 1000000,
 });
+//create post
+router.post(
+  "/",
+  auth,
+  upload.array("images", 8),
+  async (req, res) => {
+    //const { filename } = req.files;
+    //res.send(filename);
+
+    const post = new Post({
+      title: req.body.title,
+      body: req.body.body,
+      author: req.user._id,
+      images: req.files,
+      topics: req.body.topics.split(","),
+    });
+
+    // res.send(req.body.topics);
+    try {
+      await post.save();
+      res.status(201).send(post);
+    } catch (e) {
+      res.status(400).send(e);
+    }
+  },
+  (err, req, res, next) => {
+    res.status(400).send(err.message);
+  }
+);
 
 //get all post
 router.get("/", auth, async (req, res) => {
+  const limit = 10;
+  const skip = (req.query.page - 1) * limit;
+
   try {
     const posts = await Post.aggregate([
       {
@@ -69,6 +85,7 @@ router.get("/", auth, async (req, res) => {
           ],
         },
       },
+
       {
         $lookup: {
           from: "postlikes",
@@ -103,6 +120,8 @@ router.get("/", auth, async (req, res) => {
           },
         },
       },
+      { $skip: skip },
+      { $limit: limit },
     ]);
     res.send(posts);
   } catch (e) {
@@ -171,13 +190,14 @@ router.patch("/:id", auth, async (req, res) => {
 //delete post
 router.delete("/:id", auth, async (req, res) => {
   try {
-    const post = await Post.findOneAndDelete({
+    const post = await Post.findOne({
       _id: req.params.id,
       author: req.user._id,
     });
     if (!post) {
       return res.status(404).send();
     }
+    await post.remove();
     res.send(post);
   } catch (e) {
     res.status(500).send(e);
@@ -187,7 +207,7 @@ router.delete("/:id", auth, async (req, res) => {
 //get most recent
 router.get("/most-recent", auth, async (req, res) => {
   try {
-    const recentpost = await Post.find().sort({ _id: -1 });
+    const recentpost = await Post.find().sort({ _id: -1 }).limit(10);
     res.send(recentpost);
   } catch (e) {
     res.status(500).send(e);
@@ -223,6 +243,7 @@ router.get("/most-liked", auth, async (req, res) => {
           totalLikes: -1,
         },
       },
+      { $limit: 10 },
     ]);
     res.send(posts);
   } catch (e) {
@@ -285,18 +306,72 @@ router.post("/comment", auth, async (req, res) => {
   }
 });
 
-router.delete("/deleteComment/:id", auth, async (req, res) => {
+router.post("/commentofcomment", auth, async (req, res) => {
+  try {
+    const postcomment = new postComment({ author: req.user._id, ...req.body });
+    await postcomment.save();
+    res.status(201).send(postcomment);
+  } catch (e) {
+    res.status(400).send(e);
+  }
+});
+
+router.delete("/comment/:id", auth, async (req, res) => {
   try {
     const comment = await postComment.findOneAndDelete({
       author: req.user._id,
       post: req.params.id,
     });
     if (!comment) {
-      res.send(404).send();
+      return res.status(404).send();
     }
     res.send(comment);
   } catch (e) {
     res.status(400).send(e);
+  }
+});
+
+router.get("/parentscomments/:id", async (req, res) => {
+  try {
+    const comments = await postComment.find({
+      post: req.params.id,
+      parentComment: { $exists: false },
+    });
+    res.send(comments);
+  } catch (e) {
+    res.status(500).send(e);
+  }
+});
+
+router.get("/childcomments/:postid/:commentid", async (req, res) => {
+  try {
+    const comments = await postComment.find({
+      post: req.params.postid,
+      parentComment: req.params.commentid,
+    });
+    res.send(comments);
+  } catch (e) {
+    res.status(500).send(e);
+  }
+});
+
+router.get("/likes/:id", async (req, res) => {
+  try {
+    const likes = await postLike
+      .find({ post: req.params.id, isLike: true })
+      .populate("author");
+    res.send(likes);
+  } catch (e) {
+    res.status(500).send(e);
+  }
+});
+
+router.get("/dislikes/:id", async (req, res) => {
+  try {
+    const likes = await postLike.find({ post: req.params.id, isLike: false });
+    res.send(likes);
+  } catch (e) {
+    res.status(500).send(e);
   }
 });
 module.exports = router;

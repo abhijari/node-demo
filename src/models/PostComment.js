@@ -18,7 +18,7 @@ const postCommentSchema = new mongoose.Schema(
     },
     parentComment: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "postComments",
+      ref: "postComment",
     },
     like: [
       {

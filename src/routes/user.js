@@ -32,7 +32,10 @@ router.post("/login", async (req, res) => {
 //get user detail
 router.get("/profile/me", auth, async (req, res) => {
   try {
-  } catch (e) {}
+    res.send(req.user);
+  } catch (e) {
+    res.status(500).send(e);
+  }
 });
 
 //update user
@@ -44,13 +47,41 @@ router.patch("/", auth, async (req, res) => {
 //logout user
 router.post("/logout", auth, async (req, res) => {
   try {
-  } catch (e) {}
+    const user = await User.updateOne(
+      {
+        _id: req.user._id,
+      },
+      {
+        $pull: {
+          tokens: {
+            token: req.token,
+          },
+        },
+      }
+    );
+    res.send(user);
+  } catch (e) {
+    res.status(500).send(e);
+  }
 });
 
 //logout from all
 router.post("/logoutAll", auth, async (req, res) => {
   try {
-  } catch (e) {}
+    const user = await User.updateOne(
+      {
+        _id: req.user._id,
+      },
+      {
+        $set: {
+          tokens: [],
+        },
+      }
+    );
+    res.send(user);
+  } catch (e) {
+    res.status(500).send(e);
+  }
 });
 
 module.exports = router;
